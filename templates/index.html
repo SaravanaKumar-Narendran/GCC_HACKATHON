@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="topbar">
+    <div>
+        <h2 style="margin:0;">RiskRadarPlatform (RRP)</h2>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <a href="/refresh" style="text-decoration:none;background:#2563eb;color:white;padding:10px 16px;border-radius:10px;font-weight:bold;">Refresh Jira Data</a>
+        <a href="/export/csv" style="text-decoration:none;background:#16a34a;color:white;padding:10px 16px;border-radius:10px;font-weight:bold;">Download CSV</a>
+    </div>
+</div>
+
+<div class="hero" id="overview">
+    <div>
+        <h1>Jira Board Command Center</h1>
+        <p>Single-pane view of Sprint Health, Resource Capacity, Risk Flags, and Backlog Prioritization</p>
+    </div>
+    <img src="https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif" alt="Project dashboard animation" />
+</div>
+
+<div class="grid">
+    <div class="card">
+        <div class="metric-title">Total Projects</div>
+        <div class="metric-value">{{ project_count }}</div>
+    </div>
+    <div class="card">
+        <div class="metric-title">Total Open Stories</div>
+        <div class="metric-value">{{ total_open_stories }}</div>
+    </div>
+    <div class="card">
+        <div class="metric-title">Open Bugs</div>
+        <div class="metric-value">{{ open_bugs }}</div>
+    </div>
+    <div class="card">
+        <div class="metric-title">Sprint Velocity</div>
+        <div class="metric-value">{{ sprint_velocity }} SP</div>
+    </div>
+    <div class="card">
+        <div class="metric-title">High Risk Items</div>
+        <div class="metric-value">{{ high_risk_items }}</div>
+    </div>
+</div>
+
+<div class="section" id="sprint-health">
+    <h2>Sprint Health Dashboard</h2>
+    <div class="grid">
+        <div class="card">
+            <div class="metric-title">Completed Story Points</div>
+            <div class="metric-value">{{ completed_story_points }}</div>
+        </div>
+        <div class="card">
+            <div class="metric-title">Committed Story Points</div>
+            <div class="metric-value">{{ committed_story_points }}</div>
+        </div>
+        <div class="card">
+            <div class="metric-title">Total Story Points</div>
+            <div class="metric-value">{{ total_story_points }}</div>
+        </div>
+        <div class="card">
+            <div class="metric-title">Blocked Items</div>
+            <div class="metric-value">{{ blocked_items }}</div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-top:22px;">
+        <h3>Board columns</h3>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            {% for column in columns %}
+                <span class="pill blue">{{ column }}</span>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="section" id="capacity">
+    <h2>Resource Capacity Engine</h2>
+    <div class="card">
+        <table>
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Work Type</th>
+                    <th>Max Capacity</th>
+                    <th>Assigned SP</th>
+                    <th>Available</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in capacity_rows %}
+                <tr>
+                    <td>{{ row.user }}</td>
+                    <td>{{ row.role }}</td>
+                    <td>{{ row.max_capacity }} SP</td>
+                    <td>{{ row.assigned_sp }} SP</td>
+                    <td>{{ row.available }} SP</td>
+                    <td>
+                        {% if row.status == 'Available' %}
+                            <span class="badge green">Available</span>
+                        {% else %}
+                            <span class="badge orange">Full</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="section" id="risk-dashboard">
+    <h2>Risk Identification Engine</h2>
+    <div class="card">
+        <table>
+            <thead>
+                <tr>
+                    <th>Risk Type</th>
+                    <th>Severity</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in risk_items %}
+                <tr>
+                    <td>{{ item.risk }}</td>
+                    <td>
+                        {% if item.severity == 'Critical' %}
+                            <span class="badge red">Critical</span>
+                        {% elif item.severity == 'High' %}
+                            <span class="badge orange">High</span>
+                        {% elif item.severity == 'Medium' %}
+                            <span class="badge yellow">Medium</span>
+                        {% else %}
+                            <span class="badge green">Low</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ item.details }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="section" id="backlog">
+    <h2>Backlog Prioritization Dashboard</h2>
+    <div class="card">
+        <table>
+            <thead>
+                <tr>
+                    <th>Priority</th>
+                    <th>Story</th>
+                    <th>Assignee</th>
+                    <th>Status</th>
+                    <th>Story Points</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in backlog_rows %}
+                <tr>
+                    <td>{{ item.priority }}</td>
+                    <td>{{ item.summary }}</td>
+                    <td>{{ item.assignee }}</td>
+                    <td>
+                        {% if item.status == 'Done' %}
+                            <span class="badge status-done">Done</span>
+                        {% elif item.status == 'Blocked' %}
+                            <span class="badge status-blocked">Blocked</span>
+                        {% elif item.status == 'In Progress' %}
+                            <span class="badge status-progress">In Progress</span>
+                        {% else %}
+                            <span class="badge status-todo">To Do</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ item.story_points }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="summary-grid">
+        <div class="card">
+            <h3>Total Issues</h3>
+            <p style="font-size: 28px; font-weight: bold; margin: 0;">{{ total_issues }}</p>
+        </div>
+        <div class="card">
+            <h3>Resolved / Done</h3>
+            <p style="font-size: 28px; font-weight: bold; margin: 0;">{{ resolved_or_done }}</p>
+        </div>
+        <div class="card">
+            <h3>Blocked Items</h3>
+            <p style="font-size: 28px; font-weight: bold; margin: 0;">{{ blocked_items }}</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>
+            <span class="traffic-light {{ traffic_light.color }}"></span>
+            Traffic Light Status: {{ traffic_light.status }}
+        </h2>
+        <p>{{ traffic_light.message }}</p>
+    </div>
+
+    <div class="charts">
+        <div class="chart-box">
+            {{ bar_chart | safe }}
+        </div>
+        <div class="chart-box">
+            {{ pie_chart | safe }}
+        </div>
+    </div>
+{% endblock %}

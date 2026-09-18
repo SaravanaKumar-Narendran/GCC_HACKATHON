@@ -1,0 +1,172 @@
+
+Business Solution Proposal
+Project Name: RiskRadarPlatform (RRP)
+
+Business Objective
+
+Build a centralized Hi-fi realistic with GIFs enabled web application that consolidates Jira data from multiple projects and provides:
+
+Single-pane view of all Jira projects		
+Epic, Story, Task, and Bug tracking
+Sprint progress monitoring
+Risk identification and prediction
+Resource allocation recommendations
+Capacity planning based on story points
+Backlog prioritization
+Alternate resource suggestions based on availability
+
+
+Metric	ValueTotal Projects	12
+Total Open Stories	145
+Open Bugs	25
+Sprint Velocity	85 SP
+High Risk Items	9
+
+2b) Sprint Health Dashboard (Button)
+
+Metrics
+
+Sprint Velocity
+Completed Story Points
+----------------------
+Committed Story Points
+
+Burn Down
+Planned
+Completed
+Remaining
+Sprint Capacity
+
+Per Team Member
+
+User	CapacityUser A	8 SP
+User B	9 SP
+User C	7 SP
+
+3) Resource Capacity Engine (Button)
+
+
+Note: The below assignees and nature of their is added FYR to provide for alternate reousrces
+Assignee	Work type
+---------------------------
+laxmi.bodoori	Tester
+Ramesh Bodukani	Scrum master & Tester
+chandrashekhar nudurmati	Tester
+laxmi.kodoori	Implementation_Lead
+Sreedhar Rao P	Implementation_Lead
+Saravana Kumar Narendran	Implementation_Lead
+
+
+Business Rule:
+Per sprint each user can be assigned only 8-9 summary story points
+
+3a)Resource Capacity Plan Example:
+
+User	Assigned SP	StatusJohn	7	Available
+David	9	Full
+Mark	5	Available
+Capacity Formula
+Available Capacity =
+Max Capacity - Current Assigned Story Points
+
+
+Example:
+
+Max Capacity = 9 SP
+Current = 6 SP
+Available = 3 SP
+
+5. Intelligent Assignment Engine 
+
+For every backlog item:
+
+Determine:
+--------------
+Skill match
+Current workload
+Sprint capacity
+Availability
+
+Output:
+---------
+Story	Priority	Recommended UserSTORY-100	High	John
+STORY-200	Medium	Mark
+Alternate Resource Allocation
+
+If primary assignee unavailable:
+--------------------
+Find User
+Where Skill = Required Skill AND Available Capacity > Story Points
+
+
+Example:
+----------
+Story	Primary	Alternate 
+Story A	John	David
+Story B	David	Smith
+
+6. Risk Identification Engine  (Automatically highlight risks).
+
+Risk Type 1
+--------------
+Overloaded Resource
+Assigned SP > 9
+Then Risk = High
+
+Risk Type 2
+-------------
+Unassigned Critical Story
+Priority = High AND Assignee = Null
+Then Risk = Critical
+
+Risk Type 3
+----------------
+Excessive Bugs
+Open Bugs > Threshold
+then Risk = Medium
+
+
+Risk Type 4
+------------------
+Blocked Stories
+Status = Blocked
+teh Risk = High
+
+Risk Type 5
+--------------
+Sprint Capacity Breach
+
+Total Planned SP >
+Total Team Capacity
+then Risk = Critical
+
+Risk Dashboard
+---------------
+Risk	SeverityOverloaded User	High
+Unassigned Story	Critical
+Blocked Task	High
+Excess Bugs	Medium
+
+Color Coding
+------------
+Critical = Red
+High = Orange
+Medium = Yellow
+Low = Green
+
+Backlog Prioritization Dashboard
+--------------------------------
+Display:
+---------
+Priority	Story	AssigneeP1	Payment Integration	John
+P1	Security Fix	David
+P2	UI Enhancement	Mark
+
+Filter By:
+-------------
+Sprint
+Project
+Team
+Assignee
+Priority
+GitHub Copilot Prompt for Development

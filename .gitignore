@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+.venv311/
+.venv312/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Local app artifacts
+jira_exports/
+*.csv
+
+# Editor / OS
+.vscode/
+.DS_Store
+Thumbs.db

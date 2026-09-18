@@ -1,0 +1,594 @@
+RiskRadarPlatform - Web Application Development Requirements
+
+This document consolidates the clarified implementation requirements, prerequisites, dependency installation steps, user inputs, Jira connection configuration through a .env file, security requirements, testing, and acceptance criteria.
+
+======================================================================
+1. REWRITTEN DEVELOPMENT PROMPT
+======================================================================
+
+Build a full-stack, locally hosted web application named RiskRadarPlatform.
+
+PURPOSE
+Create a Jira Portfolio and Sprint Risk Management Dashboard that consolidates data from multiple Jira projects into a single application. The application must provide sprint monitoring, capacity planning, risk identification, backlog prioritization, and resource allocation recommendations.
+
+TECHNOLOGY STACK
+Frontend:
+- React
+- TypeScript
+- Vite
+- Material UI
+- React Router
+- Axios
+- Plotly.js
+- GIF and animation support
+
+Backend:
+- Node.js
+- TypeScript
+- Express
+- Axios
+- dotenv
+- cors
+- helmet
+- express-rate-limit
+- node-cache
+- danfojs-node, or a typed in-memory tabular data service providing DataFrame-like operations
+
+Testing and quality:
+- ESLint
+- Prettier
+- Vitest
+- Supertest
+
+GENERAL ARCHITECTURE
+Use the following folder structure:
+
+RiskRadarPlatform/
+  client/
+    src/
+      components/
+      pages/
+      services/
+      hooks/
+      types/
+      utils/
+  server/
+    src/
+      config/
+      controllers/
+      routes/
+      services/
+      engines/
+      models/
+      middleware/
+      types/
+      utils/
+  .env.example
+  .gitignore
+  README.md
+  package.json
+
+Use clean architecture and separate:
+- Jira API communication
+- Data normalization and caching
+- Capacity calculations
+- Risk calculations
+- Allocation recommendations
+- API controllers
+- React presentation components
+
+PRE-STEP 1: VERIFY DEVELOPMENT TOOLS
+Before creating the application:
+
+1. Verify that Node.js and npm are installed:
+   node --version
+   npm --version
+
+2. Use a Node.js version supported by the installed Vite version.
+
+3. Verify Git:
+   git --version
+
+4. Open the application folder in VS Code.
+
+PRE-STEP 2: CREATE THE APPLICATION
+Create the root project:
+
+mkdir RiskRadarPlatform
+cd RiskRadarPlatform
+npm init -y
+
+Create the React and TypeScript frontend:
+
+npm create vite@latest client -- --template react-ts
+cd client
+npm install
+
+Install frontend packages:
+
+npm install @mui/material @mui/icons-material @emotion/react @emotion/styled
+npm install react-router-dom axios
+npm install plotly.js react-plotly.js
+npm install file-saver xlsx
+npm install @react-pdf/renderer
+
+Install frontend development packages:
+
+npm install --save-dev @types/react-plotly.js @types/file-saver
+npm install --save-dev prettier vitest @testing-library/react @testing-library/jest-dom
+
+Return to the root folder and create the backend:
+
+cd ..
+mkdir server
+cd server
+npm init -y
+
+Install backend packages:
+
+npm install express axios dotenv cors helmet express-rate-limit
+npm install node-cache danfojs-node
+npm install zod
+
+Install backend development packages:
+
+npm install --save-dev typescript tsx
+npm install --save-dev @types/node @types/express @types/cors
+npm install --save-dev eslint prettier vitest supertest @types/supertest
+
+Create the TypeScript configuration:
+
+npx tsc --init
+
+Do not assume that the Python packages in installed_packages.txt satisfy the Node.js dependencies. They belong to a separate Python environment and should only be installed if a Python analytics or export service is intentionally added.
+
+PRE-STEP 3: ENVIRONMENT CONFIGURATION
+Create server/.env.example with placeholders only:
+
+JIRA_BASE_URL=https://your-domain.atlassian.net
+JIRA_EMAIL=your-email@example.com
+JIRA_API_TOKEN=replace-with-api-token
+
+SERVER_PORT=5000
+CLIENT_ORIGIN=http://localhost:5173
+CACHE_TTL_SECONDS=3600
+
+MAX_STORY_POINTS_PER_USER=9
+MIN_TARGET_STORY_POINTS_PER_USER=8
+BUG_WARNING_THRESHOLD=10
+
+Never hard-code Jira credentials in source files.
+
+Create server/.env locally by copying server/.env.example and replacing the placeholder values.
+
+Add the following entries to .gitignore:
+
+.env
+.env.*
+!.env.example
+node_modules/
+dist/
+coverage/
+
+Load the variables during backend startup:
+
+import "dotenv/config";
+
+Create a typed configuration module. Validate all required environment variables at startup. If a required variable is missing, stop the server and display a clear configuration error without printing secret values.
+
+Use these environment variables for Jira authentication:
+- process.env.JIRA_BASE_URL
+- process.env.JIRA_EMAIL
+- process.env.JIRA_API_TOKEN
+
+For Jira Cloud API token authentication, construct the Authorization header on the backend only. Never send the Jira API token to the React frontend.
+
+APPLICATION INPUTS
+
+A. Configuration inputs from server/.env
+- Jira base URL
+- Jira account email
+- Jira API token
+- Backend port
+- Allowed frontend origin
+- Cache duration
+- Maximum story points per user
+- Minimum target story points per user
+- Bug warning threshold
+
+B. Main-page user inputs
+- Project selection: required, multi-select
+- Sprint selection: optional, default to active sprint plus backlog
+- Include active sprint items: checkbox, default enabled
+- Include backlog items: checkbox, default enabled
+- Refresh data button
+- Submit or Load Jira Data button
+
+Users must be able to select multiple projects using a searchable multi-select component. Do not depend only on Ctrl+click.
+
+C. Dashboard filter inputs
+- Project
+- Board
+- Sprint
+- Team
+- Assignee
+- Issue type
+- Priority
+- Status
+- Risk severity
+- Created-date range
+- Due-date range
+
+D. Capacity inputs
+- Minimum target capacity, default from MIN_TARGET_STORY_POINTS_PER_USER
+- Maximum capacity, default from MAX_STORY_POINTS_PER_USER
+- Optional per-user capacity override
+- User work type or skill category
+- Sprint
+- Project or team
+
+E. Allocation inputs
+- Selected backlog item
+- Required work type or skill
+- Story points
+- Priority
+- Preferred assignee, optional
+- Excluded assignees, optional
+
+F. Export inputs
+- Export format: Excel or PDF
+- Selected dashboard
+- Current filters or all records
+- File name, optional
+
+JIRA CONNECTION
+Create a JiraConnectionService that:
+
+1. Reads all connection settings from server/.env.
+2. Calls Jira only from the Express backend.
+3. Uses the Jira email address and API token for authentication.
+4. Includes Accept: application/json.
+5. Implements timeout handling.
+6. Returns clear 401, 403, 404, 429, and 5xx error messages.
+7. Does not expose the API token in logs, API responses, or browser code.
+8. Provides GET /api/health/jira to test connectivity.
+9. Supports pagination when Jira returns multiple pages.
+10. Records only safe operational logs such as endpoint name, status code, and request duration.
+
+DATA COLLECTION
+Retrieve and normalize the following fields from selected Jira projects, active sprints, and backlog:
+
+- Board ID and name
+- Project ID, key, and name
+- Sprint ID, name, state, start date, and end date
+- Issue key
+- Issue ID
+- Summary
+- Issue type
+- Status
+- Priority
+- Assignee
+- Story points
+- Reporter
+- Created date
+- Updated date
+- Due date
+- Labels
+- Components
+- Fix versions
+- Description
+
+Do not assume that the story-point custom field has a fixed Jira field ID. Retrieve Jira field metadata or make the field ID configurable.
+
+Normalize missing values and arrays before placing records in the DataFrame-like data store.
+
+CACHE BEHAVIOR
+- Load Jira data only after the user selects at least one project and clicks Load Jira Data.
+- Store the normalized dataset in the backend memory cache.
+- Keep the cached dataset until:
+  1. the user submits a new project selection;
+  2. the user clicks Refresh Data; or
+  3. the configured cache duration expires.
+- Display data-loading status, timestamp, record count, and errors.
+- Disable dashboard navigation until data has loaded successfully.
+
+MAIN PAGE
+Display:
+- Application title: RiskRadarPlatform
+- Jira connection status
+- Searchable multi-project selector
+- Active sprint and backlog options
+- Load Jira Data button
+- Refresh button
+- Loading progress
+- Last successful refresh time
+- Number of projects and Jira items loaded
+
+After successful loading, enable:
+- Portfolio Dashboard
+- Sprint Health
+- Capacity Engine
+- Allocation Engine
+- Risk Dashboard
+- Backlog Dashboard
+
+Open dashboards using application routes. Include a Home button on every dashboard.
+
+PORTFOLIO DASHBOARD
+Display:
+- Total selected projects
+- Total open stories
+- Open bugs
+- Sprint velocity
+- High-risk items
+- Critical-risk items
+
+Use traffic-light indicators:
+- Critical: red
+- High: orange
+- Medium: yellow
+- Low: green
+
+Every metric must include a tooltip or drill-down displaying:
+- Jira issue key
+- Summary or description
+- Clickable Jira URL
+
+SPRINT HEALTH DASHBOARD
+Display:
+- Committed story points
+- Completed story points
+- Remaining story points
+- Sprint velocity
+- Planned versus completed
+- Burndown chart
+- Sprint progress
+- Capacity by team member
+
+CAPACITY ENGINE
+Business rule:
+- Target capacity is 8 to 9 story points per user per sprint.
+- Maximum capacity defaults to 9, but must be configurable.
+
+Calculate:
+Available Capacity = Maximum Capacity - Assigned Story Points
+
+Statuses:
+- Available: assigned points are below the minimum target
+- Near Capacity: assigned points are within the target range
+- Full: assigned points equal the maximum
+- Overloaded: assigned points exceed the maximum
+
+Display:
+- User
+- Work type
+- Assigned story points
+- Available capacity
+- Capacity status
+- Assigned issues
+
+Do not hard-code people in the business logic. Provide a configurable work-type mapping file or administration data structure.
+
+Example initial work-type mappings:
+- laxmi.bodoori: Tester
+- Ramesh Bodukani: Scrum Master and Tester
+- chandrashekhar nudurmati: Tester
+- laxmi.kodoori: Implementation Lead
+- Sreedhar Rao P: Implementation Lead
+- Saravana Kumar Narendran: Implementation Lead
+
+ALLOCATION ENGINE
+For each backlog item, calculate recommendations using:
+- Work-type or skill match
+- Current assigned story points
+- Available sprint capacity
+- User availability
+- Issue priority
+
+Display:
+- Jira issue key
+- Summary
+- Priority
+- Story points
+- Current assignee
+- Recommended assignee
+- Alternate assignees
+- Recommendation reason
+
+Do not write assignments back to Jira. Recommendations are read-only in this version.
+
+RISK ENGINE
+Implement these configurable rules:
+
+1. Overloaded Resource
+   Condition: assigned story points exceed maximum capacity
+   Severity: High
+
+2. Unassigned Critical or High-Priority Issue
+   Condition: priority is Critical or High and assignee is empty
+   Severity: Critical
+
+3. Excessive Open Bugs
+   Condition: open bug count exceeds BUG_WARNING_THRESHOLD
+   Severity: Medium
+
+4. Blocked Issue
+   Condition: status is Blocked
+   Severity: High
+
+5. Sprint Capacity Breach
+   Condition: planned story points exceed total team capacity
+   Severity: Critical
+
+Display:
+- Risk type
+- Severity
+- Project
+- Sprint
+- Jira issue or affected user
+- Reason
+- Recommended action
+- Jira hyperlink where applicable
+
+BACKLOG DASHBOARD
+Display:
+- Priority
+- Jira issue key
+- Summary
+- Issue type
+- Story points
+- Assignee
+- Status
+- Due date
+- Risk severity
+
+Support filtering, searching, sorting, and pagination.
+
+BACKEND API ENDPOINTS
+Implement:
+
+GET /api/health
+GET /api/health/jira
+GET /api/projects
+POST /api/data/load
+POST /api/data/refresh
+GET /api/data/status
+GET /api/issues
+GET /api/stories
+GET /api/bugs
+GET /api/capacity
+GET /api/allocations
+GET /api/risks
+GET /api/backlog
+GET /api/export/excel
+GET /api/export/pdf
+
+Use validated query parameters and consistent JSON response structures.
+
+USER EXPERIENCE
+- Responsive desktop and tablet interface
+- High-fidelity Material UI design
+- Loading skeletons and progress indicators
+- Clear empty states
+- Clear API and authentication errors
+- Accessible color contrast
+- Keyboard-accessible controls
+- Tooltips for metrics and charts
+- Optional animations or GIFs that do not interfere with usability
+- No Jira secret values in frontend code or browser storage
+
+EXPORT
+- Export the current filtered dashboard to Excel.
+- Export a summary report to PDF.
+- Include the report title, generation timestamp, selected projects, selected filters, and dashboard data.
+- Email functionality is outside the scope of this version.
+
+SECURITY
+- Keep Jira credentials in server/.env only.
+- Never commit server/.env.
+- Never return credentials through an API.
+- Never place Jira credentials in VITE_* variables.
+- Validate all inputs.
+- Use CORS with CLIENT_ORIGIN.
+- Use Helmet.
+- Apply rate limiting.
+- Sanitize error responses.
+- Do not log authentication headers.
+
+STARTUP COMMANDS
+Add root-level scripts so the full application can run with:
+
+npm install
+npm run install:all
+npm run dev
+
+The frontend should run on the Vite development URL.
+The backend should run using SERVER_PORT.
+
+DOCUMENTATION
+Create README.md containing:
+- Prerequisites
+- Installation commands
+- Environment setup
+- Jira API-token setup
+- Development startup
+- Production build
+- API routes
+- Testing
+- Troubleshooting for 401, 403, 429, CORS, missing story points, and empty projects
+
+TESTING
+Add tests for:
+- Environment validation
+- Jira authentication-header creation
+- Jira pagination
+- Data normalization
+- Capacity calculations
+- Every risk rule
+- Allocation recommendations
+- API error responses
+- Main-page project selection
+- Dashboard loading and empty states
+
+ACCEPTANCE CRITERIA
+1. Jira credentials are read exclusively from server/.env.
+2. The API token is never visible in the frontend.
+3. Multiple Jira projects can be selected.
+4. Active-sprint and backlog data can be loaded.
+5. Dashboard buttons remain disabled until loading succeeds.
+6. Capacity calculations use configurable limits.
+7. All five risk rules are implemented.
+8. Allocation output includes a recommendation reason.
+9. Dashboard filters work consistently.
+10. Excel and PDF exports respect current filters.
+11. Every Jira metric can drill down to issue details and links.
+12. The application starts locally using documented commands.
+13. Unit and API tests pass.
+14. Missing configuration and Jira errors produce useful messages.
+
+======================================================================
+2. RECOMMENDED .ENV.EXAMPLE
+======================================================================
+
+# Jira Cloud connection
+JIRA_BASE_URL=https://your-domain.atlassian.net
+JIRA_EMAIL=your-email@example.com
+JIRA_API_TOKEN=replace-with-api-token
+
+# Server
+SERVER_PORT=5000
+CLIENT_ORIGIN=http://localhost:5173
+
+# Cache
+CACHE_TTL_SECONDS=3600
+
+# Business rules
+MIN_TARGET_STORY_POINTS_PER_USER=8
+MAX_STORY_POINTS_PER_USER=9
+BUG_WARNING_THRESHOLD=10
+
+# Optional when automatic story-point field discovery is unsuccessful
+JIRA_STORY_POINTS_FIELD=
+
+Use an Atlassian API token rather than the Jira account password. Keep the .env file only in the backend and load its values through dotenv and process.env.
+
+======================================================================
+3. IMPORTANT CORRECTION CONCERNING INSTALLED PACKAGES
+======================================================================
+
+The installed_packages.txt file contains Python packages such as Flask, pandas, Plotly, requests, and python-dotenv. These packages do not install the React, Express, Material UI, or other Node.js dependencies required by the proposed architecture.
+
+Because the requirements specify a React frontend and Node.js backend, use npm dependencies as the primary application stack. Avoid installing the complete Python package list unless a separate Python analytics service is intentionally introduced.
+
+Use a Node.js version that is supported by the Vite version installed when the project is created rather than hard-coding an outdated Node.js version.
+
+======================================================================
+4. MAIN IMPROVEMENTS
+======================================================================
+
+- Converted the broad idea into explicit configuration, screen, filter, capacity, allocation, and export inputs.
+- Added a complete prerequisite and dependency-installation phase.
+- Isolated Jira credentials in the backend .env file.
+- Replaced hard-coded personnel logic with configurable mappings.
+- Added security controls, cache behavior, error handling, tests, and measurable acceptance criteria.
+- Resolved the mismatch between the attached Python environment and the requested React and Node.js architecture.
