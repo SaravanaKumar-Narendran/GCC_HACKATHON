@@ -1,0 +1,237 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="hero">
+    <div>
+        <h1>Realtime Business Risk Dashboard</h1>
+        <p>All Jira projects, live portfolio updates, and KPI drill-down reporting.</p>
+    </div>
+    <div class="hero-mark">📊</div>
+</div>
+
+<form method="get" action="/" class="card" style="margin-top:22px;">
+    <div class="filter-bar">
+        <div class="field" style="flex:1; min-width: 320px;">
+            <label for="project">Project filter</label>
+            <select id="project" name="project" multiple size="7">
+                {% for project in data.project_options %}
+                    <option value="{{ project.key }}" {% if project.key in selected_projects %}selected{% endif %}>{{ project.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="field">
+            <label>&nbsp;</label>
+            <button type="submit">Load project data</button>
+        </div>
+    </div>
+</form>
+
+<div class="grid">
+    <div class="card">
+        <div class="metric-title">Total Issues</div>
+        <div class="metric-value">{{ data.metrics.total }}</div>
+    </div>
+    <div class="card">
+        <div class="metric-title">Open Items</div>
+        <div class="metric-value">{{ data.metrics.open }}</div>
+    </div>
+    <div class="card">
+        <div class="metric-title">Open Bugs</div>
+        <div class="metric-value">{{ data.metrics.bugs }}</div>
+    </div>
+    <div class="card">
+        <div class="metric-title">Blocked Items</div>
+        <div class="metric-value">{{ data.metrics.blocked }}</div>
+    </div>
+    <div class="card">
+        <div class="metric-title">High Risk Items</div>
+        <div class="metric-value">{{ data.metrics.high_risk }}</div>
+    </div>
+    <div class="card">
+        <div class="metric-title">Risk Status</div>
+        <div class="metric-value">{{ data.metrics.risk_status }}</div>
+        <div style="margin-top:10px;">
+            <span class="status-badge status-{{ data.metrics.risk_status|lower }}">{{ data.metrics.risk_status }}</span>
+        </div>
+    </div>
+</div>
+
+<div class="card" style="margin-top:24px;">
+    <h3>Project breakdown by risk factor</h3>
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px;">
+        <div>
+            <canvas id="storyPointsChart" height="220"></canvas>
+        </div>
+        <div>
+            <canvas id="storyCountChart" height="220"></canvas>
+        </div>
+        <div>
+            <canvas id="riskSplitChart" height="220"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="card" style="margin-top:24px;">
+    <h3>Executive summary</h3>
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-top: 14px;">
+        {% for project in data.project_risk_chart.project_summary %}
+        {% set severity = project.severity|lower %}
+        {% set card_bg = {
+            'low': 'linear-gradient(135deg, rgba(22,163,74,0.12), rgba(240,253,244,0.95))',
+            'medium': 'linear-gradient(135deg, rgba(245,158,11,0.16), rgba(255,251,235,0.95))',
+            'high': 'linear-gradient(135deg, rgba(249,115,22,0.18), rgba(255,247,237,0.95))',
+            'critical': 'linear-gradient(135deg, rgba(220,38,38,0.18), rgba(254,242,242,0.95))'
+        }[severity] %}
+        <div style="padding: 12px 14px; border-radius: 12px; background: {{ card_bg }}; border: 1px solid rgba(148,163,184,0.25); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.45);">
+            <div style="font-size: 0.78rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em;">{{ project.project }}</div>
+            <div style="font-size: 1.8rem; font-weight: 800; margin-top: 8px;">{{ project.story_points }}</div>
+            <div style="margin-top: 6px; color: #475569;">Story points</div>
+            <div style="margin-top: 8px; color: #475569; font-weight: 700;">{{ project.story_count }} stories</div>
+            <div style="margin-top: 8px; color: #475569; font-weight: 700;">{{ project.portfolio_share }}% portfolio</div>
+            <div style="margin-top: 8px;">
+                <span class="status-badge status-{{ severity }}">{{ project.severity }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="card" style="margin-top:24px;">
+    <h3>Business KPI reports</h3>
+    <div class="report-links">
+        {% for slug, label in report_sections %}
+        <a href="/report/{{ slug }}{% if selected_projects %}?project={{ selected_projects|join('&project=') }}{% endif %}">{{ label }}</a>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="card" style="margin-top:24px;">
+    <h3>Project risk legend</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Project</th>
+                <th>Story points</th>
+                <th>Stories</th>
+                <th>Risk mix</th>
+                <th>Portfolio share</th>
+                <th>Risk</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for project in data.project_risk_chart.project_summary %}
+            <tr style="background: {% if project.severity == 'Low' %}rgba(22,163,74,0.05){% elif project.severity == 'Medium' %}rgba(245,158,11,0.06){% elif project.severity == 'High' %}rgba(249,115,22,0.07){% else %}rgba(220,38,38,0.07){% endif %};">
+                <td>{{ project.project }}</td>
+                <td>{{ project.story_points }}</td>
+                <td>{{ project.story_count }}</td>
+                <td>{{ project.risk_mix }}</td>
+                <td>{{ project.portfolio_share }}%</td>
+                <td><span class="status-badge status-{{ project.severity|lower }}">{{ project.severity }}</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="card" style="margin-top:24px;">
+    <h3>Jira issue references</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Project</th>
+                <th>Issue</th>
+                <th>Priority</th>
+                <th>Risk Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data.issue_rows %}
+            <tr>
+                <td>{{ row.project }}</td>
+                <td><a class="issue-link" href="{{ row.issue_link }}" target="_blank" rel="noreferrer">{{ row.issue_key }}</a></td>
+                <td>{{ row.priority }}</td>
+                <td><span class="status-badge status-{{ row.risk|lower }}">{{ row.risk }}</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const storyPointsChart = new Chart(document.getElementById('storyPointsChart'), {
+  type: 'doughnut',
+  data: {
+    labels: {{ data.project_risk_chart.story_points_labels|tojson }},
+    datasets: [{
+      label: 'Story points by project',
+      data: {{ data.project_risk_chart.story_points_values|tojson }},
+      backgroundColor: ['#2563eb', '#16a34a', '#f59e0b', '#f97316', '#dc2626', '#7c3aed', '#14b8a6', '#ef4444'],
+      borderWidth: 2,
+      borderColor: '#ffffff'
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom' },
+      title: {
+        display: true,
+        text: 'Story points by project'
+      }
+    }
+  }
+});
+
+const storyCountChart = new Chart(document.getElementById('storyCountChart'), {
+  type: 'doughnut',
+  data: {
+    labels: {{ data.project_risk_chart.story_count_labels|tojson }},
+    datasets: [{
+      label: 'Stories by project',
+      data: {{ data.project_risk_chart.story_count_values|tojson }},
+      backgroundColor: ['#1d4ed8', '#22c55e', '#fbbf24', '#f97316', '#ef4444', '#8b5cf6', '#2dd4bf', '#f43f5e'],
+      borderWidth: 2,
+      borderColor: '#ffffff'
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom' },
+      title: {
+        display: true,
+        text: 'Story count by project'
+      }
+    }
+  }
+});
+
+const riskSplitChart = new Chart(document.getElementById('riskSplitChart'), {
+  type: 'doughnut',
+  data: {
+    labels: {{ data.project_risk_chart.risk_split_labels|tojson }},
+    datasets: [{
+      label: 'Risk factor split',
+      data: {{ data.project_risk_chart.risk_split_counts|tojson }},
+      backgroundColor: ['#22c55e', '#fbbf24', '#f97316', '#ef4444', '#10b981', '#facc15', '#fb923c', '#dc2626', '#16a34a', '#eab308', '#ea580c', '#b91c1c'],
+      borderWidth: 2,
+      borderColor: '#ffffff'
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom' },
+      title: {
+        display: true,
+        text: 'Risk factor split by project'
+      }
+    }
+  }
+});
+</script>
+{% endblock %}
