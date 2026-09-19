@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div>
+            <div class="muted">Business KPI report</div>
+            <h2 style="margin:8px 0 0;">{{ report_title }}</h2>
+        </div>
+        <a href="/" style="text-decoration:none;background:#0f172a;color:white;padding:10px 16px;border-radius:10px;font-weight:bold;">Back to Overview</a>
+    </div>
+    <p class="muted" style="margin-top:10px;">{{ description }}</p>
+</div>
+
+<form method="get" action="/report/{{ section }}" class="card" style="margin-top:22px;">
+    <div class="filter-bar">
+        <div class="field" style="flex:1; min-width: 320px;">
+            <label for="project">Project filter</label>
+            <select id="project" name="project" multiple size="7">
+                {% for project in project_options %}
+                    <option value="{{ project.key }}" {% if project.key in selected_projects %}selected{% endif %}>{{ project.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="field">
+            <label>&nbsp;</label>
+            <button type="submit">Apply filter</button>
+        </div>
+    </div>
+</form>
+
+<div class="report-links" style="margin-top:20px;">
+    {% for slug, label in report_sections %}
+        <a href="/report/{{ slug }}{% if selected_projects %}?project={{ selected_projects|join('&project=') }}{% endif %}">{{ label }}</a>
+    {% endfor %}
+</div>
+
+<div class="grid">
+    {% for card in cards %}
+    <div class="card">
+        <div class="metric-title">{{ card.label }}</div>
+        <div class="metric-value">{{ card.value }}</div>
+        <div style="margin-top:10px;">
+            <span class="status-badge status-{{ card.status|lower }}">{{ card.status }}</span>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="card" style="margin-top:24px;">
+    <h3>Jira issue references</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Project</th>
+                <th>Issue</th>
+                <th>Priority</th>
+                <th>Risk Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+            <tr>
+                <td>{{ row.project }}</td>
+                <td><a class="issue-link" href="{{ row.issue_link }}" target="_blank" rel="noreferrer">{{ row.issue_key }}</a></td>
+                <td>{{ row.priority }}</td>
+                <td><span class="status-badge status-{{ row.risk|lower }}">{{ row.risk }}</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
